@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>點數趨勢計數法</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Q">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+
+<style>
+:root{
+  --gold:#f5d06f;
+  --gold2:#c89b3c;
+  --line:#3a2c12;
+  --text:#f7e7b3;
+  --muted:#bba676;
+  --blue:#60a5fa;
+  --red:#f87171;
+  --green:#34d399;
+  --gray:#94a3b8;
+  --panel:#101010;
+  --shadow:0 0 0 1px rgba(245,208,111,.10),0 8px 18px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;width:100%;min-height:100%;overflow-x:hidden;
+  background:radial-gradient(circle at top,#15110a 0%,#080808 35%,#000 100%);
+  font-family:Arial,"Microsoft JhengHei",sans-serif;color:var(--text)
+}
+button{font-family:inherit}
+.app{width:100%;max-width:920px;margin:0 auto;padding:8px;display:grid;gap:8px}
+.logo,.side,.main-panel,.predict,.keys-panel,.history-panel{
+  min-width:0;max-width:100%;
+  background:linear-gradient(180deg,#171717,#101010);
+  border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)
+}
+.logo{
+  display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 12px;
+  background:linear-gradient(180deg,#1a1408,#0d0d0d)
+}
+.logo-mark{
+  width:48px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;color:#111;
+  background:linear-gradient(135deg,#fff2c2,#f5d06f 45%,#b8872e);
+  box-shadow:0 0 12px rgba(245,208,111,.35)
+}
+.logo-title{color:#fff4cf;font-size:20px;font-weight:900;line-height:1}
+.logo-sub{color:#bfa56b;font-size:10px;letter-spacing:2px;margin-top:4px}
+
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.side{padding:10px 8px}
+.side-title{text-align:center;font-size:16px;font-weight:900;color:#fff2c7;margin-bottom:8px}
+.side-sub{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card-cell{
+  height:54px;min-width:0;border-radius:14px;border:1px solid #5a4319;
+  background:linear-gradient(180deg,#1d1d1d,#121212);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:900;color:#fff7dd;user-select:none;cursor:pointer
+}
+.card-cell.span2{grid-column:1/span 2}
+.card-cell.active{
+  border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,208,111,.14);
+  background:linear-gradient(180deg,#32270f,#19150d)
+}
+.card-cell.empty::after{font-size:12px;font-weight:800;color:#8a7b57}
+.p1.empty::after{content:"P1"}.p2.empty::after{content:"P2"}.p3.empty::after{content:"P3"}
+.b1.empty::after{content:"B1"}.b2.empty::after{content:"B2"}.b3.empty::after{content:"B3"}
+
+.main-panel,.predict,.keys-panel,.history-panel{padding:10px}
+.info-row{
+  display:grid;
+  grid-template-columns:minmax(50px,.75fr) minmax(50px,.75fr) minmax(54px,.8fr) minmax(58px,.8fr) minmax(64px,.9fr);
+  gap:6px;align-items:center
+}
+.badge{
+  min-width:0;padding:7px 5px;border-radius:999px;font-size:14px;font-weight:900;text-align:center;
+  border:1px solid #4a3717;background:#131313;white-space:nowrap
+}
+.badge.player{color:var(--blue)}.badge.banker{color:var(--red)}
+.winner{min-width:0;font-size:18px;font-weight:900;text-align:center;white-space:nowrap}
+.winner.player{color:var(--blue)}.winner.banker{color:var(--red)}.winner.tie{color:var(--green)}
+.btn{
+  min-width:0;border:none;border-radius:12px;padding:8px 6px;font-size:13px;font-weight:900;
+  cursor:pointer;color:#111;background:linear-gradient(180deg,#f5d06f,#c89b3c);white-space:nowrap
+}
+.btn:active,.key:active{transform:scale(.97)}
+.btn-clear{background:linear-gradient(180deg,#e7e5e4,#a8a29e)}
+.btn-history{background:linear-gradient(180deg,#fda4af,#dc2626);color:#fff}
+.detail{margin-top:8px;min-height:18px;font-size:14px;color:#d8c28a}
+
+.predict-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.predict-title{font-size:16px;font-weight:900;color:#fff1c8}
+.next-pick{
+  padding:7px 13px;border-radius:999px;border:1px solid #5a4319;
+  background:#151515;font-size:18px;font-weight:900;white-space:nowrap
+}
+.next-pick.player{color:var(--blue)}.next-pick.banker{color:var(--red)}.next-pick.wait{color:var(--gray)}
+
+.ea-grid{margin-top:9px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ea-box{
+  min-width:0;background:linear-gradient(180deg,#191919,#121212);
+  border:1px solid #4a3717;border-radius:14px;padding:10px 7px;text-align:center
+}
+.ea-name{font-size:13px;font-weight:900;color:var(--muted)}
+.ea-value{margin-top:5px;font-size:23px;font-weight:900;overflow-wrap:anywhere}
+.ea-box.player .ea-value{color:var(--blue)}.ea-box.banker .ea-value{color:var(--red)}
+
+.formula{
+  margin-top:9px;background:#151515;border:1px solid #4a3717;border-radius:14px;
+  padding:9px 11px;font-size:12px;line-height:1.55;color:#d8c28a;overflow-wrap:anywhere
+}
+.formula strong{color:#fff2c7}
+
+.key-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.key{
+  min-width:0;border:1px solid #45351a;background:linear-gradient(180deg,#1f1f1f,#121212);
+  border-radius:12px;min-height:44px;font-size:16px;font-weight:900;color:#f9e3a4;
+  cursor:pointer;touch-action:manipulation
+}
+.key.skip{color:#d1d5db}
+
+.history-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+.history-title{font-size:16px;font-weight:900;color:#fff1c8}
+.history-sub{font-size:12px;color:var(--muted)}
+.history-list{display:flex;flex-direction:column;gap:5px;min-width:0}
+.history-empty{font-size:14px;color:var(--muted);padding:8px}
+.h-item{
+  min-width:0;border:1px solid #5a4319;border-radius:12px;
+  background:linear-gradient(180deg,#1b1b1b,#111);padding:6px
+}
+.h-top{font-size:11px;color:#d8c28a;margin-bottom:5px;font-weight:900}
+.h-grid{
+  min-width:0;display:grid;
+  grid-template-columns:minmax(0,1.38fr) minmax(0,.82fr) minmax(0,.9fr) minmax(0,.72fr);
+  gap:4px;align-items:stretch
+}
+.h-cards{min-width:0;font-size:11px;line-height:1.25;overflow:hidden}
+.p-line{color:#93c5fd;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b-line{color:#fca5a5;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-box,.h-result,.h-status{
+  min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  border-radius:8px;padding:5px 2px;color:#111;font-size:10px;font-weight:900;
+  line-height:1.15;overflow-wrap:anywhere
+}
+.h-ea{background:#f5d06f}
+.h-result.player{background:#60a5fa}.h-result.banker{background:#f87171}.h-result.tie{background:#64748b}
+.hit{background:#16a34a}.miss{background:#dc2626}.draw{background:#64748b}
+
+@media(max-width:700px){
+  .app{padding:4px;gap:5px}
+  .logo{padding:7px 6px;border-radius:14px}
+  .logo-mark{width:42px;height:34px;font-size:11px}
+  .logo-title{font-size:16px}.logo-sub{font-size:8px;letter-spacing:1px}
+  .top{gap:4px}.side{padding:6px 4px;border-radius:13px}
+  .side-title{font-size:12px;margin-bottom:4px}
+  .card-grid{gap:4px}.card-cell{height:43px;font-size:14px;border-radius:10px}
+  .main-panel,.predict,.keys-panel,.history-panel{padding:6px;border-radius:13px}
+  .info-row{gap:3px}
+  .badge,.winner,.btn{font-size:9px;padding:6px 1px;border-radius:8px}
+  .detail{font-size:10px;margin-top:5px;min-height:14px}
+  .predict-title{font-size:13px}.next-pick{font-size:14px;padding:6px 10px}
+  .ea-grid{gap:4px;margin-top:6px}.ea-box{padding:7px 3px;border-radius:10px}
+  .ea-name{font-size:10px}.ea-value{font-size:17px}
+  .formula{margin-top:6px;padding:7px;font-size:9px;line-height:1.4;border-radius:10px}
+  .key-grid{gap:3px}.key{min-height:34px;padding:0;font-size:11px;border-radius:8px}
+  .history-head{margin-bottom:4px}.history-title{font-size:14px}.history-sub{font-size:9px}
+  .btn-history{font-size:9px;padding:5px 6px}
+  .history-list{gap:2px}.h-item{padding:3px 4px;border-radius:8px}
+  .h-top{font-size:10px;margin-bottom:2px;line-height:1}
+  .h-grid{gap:2px}
+  .h-cards{font-size:10px;line-height:1.05}
+  .h-box,.h-result,.h-status{font-size:9px;padding:3px 1px;border-radius:6px;line-height:1.05}
+}
+@media(max-width:390px){
+  .logo-title{font-size:14px}.card-cell{height:40px;font-size:13px}
+  .badge,.winner,.btn{font-size:8px}
+  .key{font-size:10px;min-height:32px}
+  .h-cards{font-size:9px}.h-box,.h-result,.h-status{font-size:8px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="logo">
+    <div class="logo-mark">T</div>
+    <div>
+      <div class="logo-title">點數趨勢計數法</div>
+      <div class="logo-sub">2 ROUNDS → NEXT ROUND</div>
+    </div>
+  </div>
+
+  <div class="top">
+    <div class="side">
+      <div class="side-title">PLAYER<span class="side-sub">閒家</span></div>
+      <div class="card-grid">
+        <div class="card-cell empty p1" data-index="0"></div>
+        <div class="card-cell empty p2" data-index="1"></div>
+        <div class="card-cell empty p3 span2" data-index="4"></div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="side-title">BANKER<span class="side-sub">莊家</span></div>
+      <div class="card-grid">
+        <div class="card-cell empty b1" data-index="2"></div>
+        <div class="card-cell empty b2" data-index="3"></div>
+        <div class="card-cell empty b3 span2" data-index="5"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-panel">
+    <div class="info-row">
+      <div class="badge player" id="playerScore">閒 0</div>
+      <div class="badge banker" id="bankerScore">莊 0</div>
+      <div class="winner tie" id="winnerText">和局</div>
+      <button id="nextBtn" class="btn" type="button">下一局</button>
+      <button id="clearBoardBtn" class="btn btn-clear" type="button">清除本局</button>
+    </div>
+    <div class="detail" id="detailText">請依序輸入牌面</div>
+  </div>
+
+  <div class="predict">
+    <div class="predict-head">
+      <div class="predict-title">點數趨勢分析區</div>
+      <div class="next-pick wait" id="nextPick">下把：需滿2局</div>
+    </div>
+
+    <div class="ea-grid">
+      <div class="ea-box player">
+        <div class="ea-name">前第2局計數</div>
+        <div class="ea-value" id="roundA">-</div>
+      </div>
+      <div class="ea-box banker">
+        <div class="ea-name">前第1局計數</div>
+        <div class="ea-value" id="roundB">-</div>
+      </div>
+    </div>
+
+    <div class="formula" id="formulaText">
+      <strong>計數：</strong>A/2/3 = +1；4/5/6/7 = +2；8 = -2；9/10/J/Q/K = -1<br>
+      <strong>規則：</strong>最近兩局所有牌面計數相加，正數→莊；負數→閒；0→觀望
+    </div>
+  </div>
+
+  <div class="keys-panel">
+    <div class="key-grid" id="cardButtons">
+      <button class="key" data-card="A">A</button>
+      <button class="key" data-card="2">2</button>
+      <button class="key" data-card="3">3</button>
+      <button class="key" data-card="4">4</button>
+      <button class="key" data-card="5">5</button>
+      <button class="key" data-card="6">6</button>
+      <button class="key" data-card="7">7</button>
+      <button class="key" data-card="8">8</button>
+      <button class="key" data-card="9">9</button>
+      <button class="key" data-card="10">10</button>
+      <button class="key" data-card="J">J</button>
+      <button class="key" data-card="Q">Q</button>
+      <button class="key" data-card="K">K</button>
+      <button class="key skip" id="skipBtn" type="button">不補</button>
+    </div>
+  </div>
+
+  <div class="history-panel">
+    <div class="history-head">
+      <div>
+        <div class="history-title">歷史紀錄</div>
+        <div class="history-sub">最近 15 筆｜點數趨勢計數法</div>
+      </div>
+      <button id="clearHistoryBtn" class="btn btn-history" type="button">清除歷史</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const STORAGE_KEY = 'point_trend_count_system_v1';
+  const MAX_HISTORY = 15;
+
+  let values = ['', '', '', '', '', ''];
+  const order = [0, 1, 2, 3, 4, 5];
+  let currentStep = 0;
+  let selectedIndex = null;
+
+  // 已完成局，最新在前
+  let rounds = [];
+  // 已結算的預測紀錄，最新在前
+  let historyData = [];
+  // 目前正在等待下一局驗證的預測
+  let pendingPrediction = null;
+  let roundNo = 1;
+
+  const $ = id => document.getElementById(id);
+  const cells = [...document.querySelectorAll('.card-cell')];
+
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        values, currentStep, selectedIndex, rounds, historyData, pendingPrediction, roundNo
+      }));
+    }catch(e){}
+  }
+
+  function load(){
+    try{
+      const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if(Array.isArray(d.values) && d.values.length === 6) values = d.values;
+      currentStep = Number.isInteger(d.currentStep) ? d.currentStep : 0;
+      selectedIndex = Number.isInteger(d.selectedIndex) ? d.selectedIndex : null;
+      rounds = Array.isArray(d.rounds) ? d.rounds.slice(0, 30) : [];
+      historyData = Array.isArray(d.historyData) ? d.historyData.slice(0, MAX_HISTORY) : [];
+      pendingPrediction = d.pendingPrediction || null;
+      roundNo = Number.isInteger(d.roundNo) && d.roundNo > 0 ? d.roundNo : 1;
+    }catch(e){}
+  }
+
+  function baccaratValue(card){
+    if(card === 'A') return 1;
+    if(['10','J','Q','K'].includes(card)) return 0;
+    return parseInt(card, 10) || 0;
+  }
+
+  function trendValue(card){
+    if(['A','2','3'].includes(card)) return 1;
+    if(['4','5','6','7'].includes(card)) return 2;
+    if(card === '8') return -2;
+    if(['9','10','J','Q','K'].includes(card)) return -1;
+    return 0;
+  }
+
+  function cards(side){
+    const idx = side === 'P' ? [0,1,4] : [2,3,5];
+    return idx.map(i => values[i]).filter(Boolean);
+  }
+
+  function pointTotal(list){
+    return list.reduce((sum, card) => sum + baccaratValue(card), 0) % 10;
+  }
+
+  function actualResult(playerPoint, bankerPoint){
+    return playerPoint > bankerPoint ? '閒' : bankerPoint > playerPoint ? '莊' : '和';
+  }
+
+  function predictionStatus(prediction, actual){
+    if(actual === '和' || !['閒','莊'].includes(prediction)) return '-';
+    return prediction === actual ? '準' : '失敗';
+  }
+
+  function allCurrentCards(){
+    return values.filter(Boolean);
+  }
+
+  function currentTrendTotal(){
+    return allCurrentCards().reduce((sum, card) => sum + trendValue(card), 0);
+  }
+
+  function predictFromSum(sum){
+    if(sum > 0) return '莊';
+    if(sum < 0) return '閒';
+    return '觀望';
+  }
+
+  function evaluate(){
+    const p = cards('P');
+    const b = cards('B');
+    const ready = p.length >= 2 && b.length >= 2;
+
+    if(!ready){
+      return {
+        p,b,ready:false,playerPoint:null,bankerPoint:null,actual:'-',trendTotal:currentTrendTotal()
+      };
+    }
+
+    const playerPoint = pointTotal(p);
+    const bankerPoint = pointTotal(b);
+
+    return {
+      p,b,ready:true,
+      playerPoint,bankerPoint,
+      actual:actualResult(playerPoint, bankerPoint),
+      trendTotal:currentTrendTotal()
+    };
+  }
+
+  function nextPredictionInfo(){
+    if(rounds.length < 2){
+      return {ready:false, a:null, b:null, sum:null, pick:'需滿2局'};
+    }
+    const b = rounds[0]; // 最近一局
+    const a = rounds[1]; // 前兩局中的較早一局
+    const sum = a.trendTotal + b.trendTotal;
+    return {ready:true, a, b, sum, pick:predictFromSum(sum)};
+  }
+
+  function setPickDisplay(pick){
+    const el = $('nextPick');
+    el.textContent = '下把：' + pick;
+    el.className = 'next-pick ' + (pick === '閒' ? 'player' : pick === '莊' ? 'banker' : 'wait');
+  }
+
+  function renderHistory(){
+    const items = historyData.slice(0, MAX_HISTORY);
+
+    if(!items.length){
+      $('historyList').innerHTML = '<div class="history-empty">目前還沒有已結算的預測紀錄</div>';
+      return;
+    }
+
+    $('historyList').innerHTML = items.map(item => {
+      const actualClass = item.actual === '閒' ? 'player' : item.actual === '莊' ? 'banker' : 'tie';
+      const statusClass = item.status === '準' ? 'hit' : item.status === '失敗' ? 'miss' : 'draw';
+
+      return `
+        <div class="h-item">
+          <div class="h-top">第${item.fromA}局 + 第${item.fromB}局 → 預測第${item.targetRound}局</div>
+          <div class="h-grid">
+            <div class="h-cards">
+              <div class="p-line">閒：${item.player || '-'} [${item.playerPoint ?? '-'}點]</div>
+              <div class="b-line">莊：${item.banker || '-'} [${item.bankerPoint ?? '-'}點]</div>
+            </div>
+            <div class="h-box h-ea">
+              當局 ${item.currentTotal}<br>兩局 ${item.sum}<br>預測 ${item.pick}
+            </div>
+            <div class="h-result ${actualClass}">
+              實際：${item.actual}
+            </div>
+            <div class="h-status ${statusClass}">
+              ${item.status}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function render(){
+    const s = evaluate();
+    const info = nextPredictionInfo();
+
+    cells.forEach(cell => {
+      const i = Number(cell.dataset.index);
+      const value = values[i];
+      cell.textContent = value;
+      cell.classList.toggle('empty', !value);
+      cell.classList.toggle(
+        'active',
+        selectedIndex === i || (selectedIndex === null && order[currentStep] === i && currentStep < 6)
+      );
+    });
+
+    $('playerScore').textContent = '閒 ' + (s.playerPoint ?? 0);
+    $('bankerScore').textContent = '莊 ' + (s.bankerPoint ?? 0);
+    $('winnerText').textContent = s.actual === '閒' ? '閒贏' : s.actual === '莊' ? '莊贏' : '和局';
+    $('winnerText').className = 'winner ' + (s.actual === '閒' ? 'player' : s.actual === '莊' ? 'banker' : 'tie');
+
+    $('detailText').textContent = s.ready
+      ? `本局趨勢計數：${s.trendTotal}｜按「下一局」後納入兩局滾動計算`
+      : `請依序輸入牌面｜目前趨勢計數：${s.trendTotal}`;
+
+    if(info.ready){
+      $('roundA').textContent = info.a.trendTotal;
+      $('roundB').textContent = info.b.trendTotal;
+      setPickDisplay(info.pick);
+      $('formulaText').innerHTML =
+        `<strong>第${info.a.roundNo}局：</strong>${info.a.trendTotal} ／ ` +
+        `<strong>第${info.b.roundNo}局：</strong>${info.b.trendTotal}<br>` +
+        `<strong>兩局合計：</strong>${info.sum} → ${info.pick}<br>` +
+        `<strong>計數：</strong>A/2/3=+1；4/5/6/7=+2；8=-2；9/10/J/Q/K=-1`;
+    }else{
+      $('roundA').textContent = rounds.length >= 1 ? '-' : '-';
+      $('roundB').textContent = rounds.length >= 1 ? rounds[0].trendTotal : '-';
+      setPickDisplay('需滿2局');
+      $('formulaText').innerHTML =
+        `<strong>計數：</strong>A/2/3 = +1；4/5/6/7 = +2；8 = -2；9/10/J/Q/K = -1<br>` +
+        `<strong>規則：</strong>第1+2局預測第3局；第2+3局預測第4局；依此滾動。正數→莊；負數→閒；0→觀望`;
+    }
+
+    renderHistory();
+    save();
+  }
+
+  function inputCard(card){
+    if(selectedIndex !== null){
+      values[selectedIndex] = card;
+      selectedIndex = null;
+    }else if(currentStep < 6){
+      values[order[currentStep]] = card;
+      currentStep++;
+    }
+    render();
+  }
+
+  function skip(){
+    if(selectedIndex !== null){
+      values[selectedIndex] = '';
+      selectedIndex = null;
+    }else if(currentStep < 6){
+      currentStep++;
+    }
+    render();
+  }
+
+  function nextRound(){
+    const s = evaluate();
+
+    if(!s.ready){
+      alert('請至少輸入閒家與莊家的前兩張牌。');
+      return;
+    }
+
+    // 先用先前兩局產生的預測，驗證本局實際結果
+    if(pendingPrediction){
+      historyData.unshift({
+        ...pendingPrediction,
+        player:s.p.join(' '),
+        banker:s.b.join(' '),
+        playerPoint:s.playerPoint,
+        bankerPoint:s.bankerPoint,
+        currentTotal:s.trendTotal,
+        actual:s.actual,
+        status:predictionStatus(pendingPrediction.pick, s.actual)
+      });
+      historyData = historyData.slice(0, MAX_HISTORY);
+    }
+
+    // 儲存本局
+    const completed = {
+      roundNo,
+      player:s.p.join(' '),
+      banker:s.b.join(' '),
+      playerPoint:s.playerPoint,
+      bankerPoint:s.bankerPoint,
+      actual:s.actual,
+      trendTotal:s.trendTotal
+    };
+    rounds.unshift(completed);
+    rounds = rounds.slice(0, 30);
+
+    // 完成兩局後，立即建立下一局預測
+    if(rounds.length >= 2){
+      const newer = rounds[0];
+      const older = rounds[1];
+      const sum = older.trendTotal + newer.trendTotal;
+      pendingPrediction = {
+        fromA:older.roundNo,
+        fromB:newer.roundNo,
+        targetRound:roundNo + 1,
+        aTotal:older.trendTotal,
+        bTotal:newer.trendTotal,
+        sum,
+        pick:predictFromSum(sum)
+      };
+    }else{
+      pendingPrediction = null;
+    }
+
+    roundNo++;
+    values = ['', '', '', '', '', ''];
+    currentStep = 0;
+    selectedIndex = null;
+    render();
+  }
+
+  $('cardButtons').addEventListener('click', e => {
+    const button = e.target.closest('[data-card]');
+    if(button) inputCard(button.dataset.card);
+  });
+
+  $('skipBtn').addEventListener('click', skip);
+  $('nextBtn').addEventListener('click', nextRound);
+
+  $('clearBoardBtn').addEventListener('click', () => {
+    values = ['', '', '', '', '', ''];
+    currentStep = 0;
+    selectedIndex = null;
+    render();
+  });
+
+  $('clearHistoryBtn').addEventListener('click', () => {
+    if(!confirm('確定清除全部歷史紀錄嗎？')) return;
+    historyData = [];
+    rounds = [];
+    pendingPrediction = null;
+    roundNo = 1;
+    values = ['', '', '', '', '', ''];
+    currentStep = 0;
+    selectedIndex = null;
+    render();
+  });
+
+  cells.forEach(cell => {
+    cell.addEventListener('click', () => {
+      selectedIndex = Number(cell.dataset.index);
+      render();
+    });
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
